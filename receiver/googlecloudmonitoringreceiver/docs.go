@@ -3,6 +3,4 @@
 
 //go:generate mdatagen metadata.yaml
 
-package googlecloudmonitoringreceiver
-
-// import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudmonitoringreceiver"
+package googlecloudmonitoringreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudmonitoringreceiver"

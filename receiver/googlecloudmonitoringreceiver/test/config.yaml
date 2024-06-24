@@ -1,0 +1,54 @@
+googlecloudmonitoring:
+  collection_interval: 120s
+  region: us-central1
+  project_id: my-project_id
+  service_account_key: "service account json key"
+  credential_file_path: "path/to/service_account.json"
+  services:
+    - service_name: "compute"
+      delay: 60
+      filters:
+        group_id: "group-id" # https://cloud.google.com/monitoring/api/v3/filters#filter_selectors_intro
+        metric_name: "compute.googleapis.com/instance/cpu/usage_time"
+        metric_type:
+        - metric_labels: # https://cloud.google.com/monitoring/api/v3/filters#metric_selector
+              labels_name: "instance_name"
+              labels_value: "frontend-"
+        - metric_labels:
+              labels_name: "resource_type"
+              labels_value: "instance"
+        - metric_labels:
+              labels_name: "resource_id"
+              labels_value: "abc-123456"
+              resource_type: "gce_instance"
+        - resource_labels: # https://cloud.google.com/monitoring/api/v3/filters#resource_selector
+              labels_name: "zone"
+              labels_value: "us-"
+        - resource_labels:
+              labels_name: "zone"
+              labels_value: "europe-"
+        - metadata_system_labels: # https://cloud.google.com/monitoring/api/v3/filters#group-resource-comparisons
+              labels_name: "machine_type"
+              labels_value: "e2-medium"
+        - metadata_system_labels: # https://cloud.google.com/monitoring/api/v3/filters#group-resource-comparisons
+            labels_name: "machine_type"
+            labels_value: "e2-micro"
+      interval: # https://cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.snoozes#timeinterval
+        start_time:
+        end_time:
+      aggregation: # https://cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.alertPolicies#aggregation
+        alignmentPeriod: "string"
+        perSeriesAligner: "enum"
+        crossSeriesReducer: "enum"
+        groupByFields:
+            - "string"
+      secondary_aggregation: # https://cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.alertPolicies#aggregation
+        alignmentPeriod: "string"
+        perSeriesAligner: "enum"
+        crossSeriesReducer: "enum"
+        groupByFields:
+            - "string"
+      order_by: # https://cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.timeSeries/list
+      view: "enum"
+      page_size: "integer"
+      page_token: "string"

@@ -5,23 +5,14 @@ package googlecloudmonitoringreceiver // import "github.com/open-telemetry/opent
 
 import (
 	"errors"
-	"fmt"
-
-	"go.opentelemetry.io/collector/receiver/scraperhelper"
-)
-
-const (
-	minCollectionIntervalSeconds = 60
 )
 
 type Config struct {
-	scraperhelper.ControllerConfig `mapstructure:",squash"`
-	TopMetricsQueryMaxRows         int       `mapstructure:"top_metrics_query_max_rows"`
-	Region                         string    `mapstructure:"region"`
-	ProjectID                      string    `mapstructure:"project_id"`
-	ServiceAccountKey              string    `mapstructure:"service_account_key"`
-	CredentialFilePath             string    `mapstructure:"credential_file_path"`
-	Services                       []Service `mapstructure:"services"`
+	Region             string    `mapstructure:"region"`
+	ProjectID          string    `mapstructure:"project_id"`
+	ServiceAccountKey  string    `mapstructure:"service_account_key"`
+	CredentialFilePath string    `mapstructure:"credential_file_path"`
+	Services           []Service `mapstructure:"services"`
 }
 
 type Service struct {
@@ -38,9 +29,12 @@ type Service struct {
 }
 
 type Filters struct {
-	GroupID              string      `mapstructure:"group_id"`
-	MetricName           string      `mapstructure:"metric_name"`
-	MetricType           []LabelPair `mapstructure:"metric_type"`
+	GroupID    string     `mapstructure:"group_id"`
+	MetricName string     `mapstructure:"metric_name"`
+	MetricType MetricType `mapstructure:"metric_type"`
+}
+
+type MetricType struct {
 	MetricLabels         []LabelPair `mapstructure:"metric_labels"`
 	ResourceType         string      `mapstructure:"resource_type"`
 	ResourceLabels       []LabelPair `mapstructure:"resource_labels"`
@@ -65,10 +59,6 @@ type Aggregation struct {
 }
 
 func (config *Config) Validate() error {
-	if config.CollectionInterval.Seconds() < minCollectionIntervalSeconds {
-		return fmt.Errorf("\"collection_interval\" must be not lower than %v seconds, current value is %v seconds", minCollectionIntervalSeconds, config.CollectionInterval.Seconds())
-	}
-
 	if len(config.Services) == 0 {
 		return errors.New("missing required field \"services\" or its value is empty")
 	}
@@ -107,19 +97,19 @@ func (filters Filters) Validate() error {
 		return errors.New("field \"metric_name\" is required and cannot be empty for filters configuration")
 	}
 
-	for _, label := range filters.MetricLabels {
+	for _, label := range filters.MetricType.MetricLabels {
 		if err := label.Validate(); err != nil {
 			return err
 		}
 	}
 
-	for _, label := range filters.ResourceLabels {
+	for _, label := range filters.MetricType.ResourceLabels {
 		if err := label.Validate(); err != nil {
 			return err
 		}
 	}
 
-	for _, label := range filters.MetadataSystemLabels {
+	for _, label := range filters.MetricType.MetadataSystemLabels {
 		if err := label.Validate(); err != nil {
 			return err
 		}

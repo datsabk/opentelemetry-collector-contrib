@@ -32,10 +32,9 @@ func TestLoadConfig(t *testing.T) {
 			ControllerConfig: scraperhelper.ControllerConfig{
 				CollectionInterval: 120 * time.Second,
 			},
-			Region:             "us-central1",
-			ProjectID:          "my-project-id",
-			ServiceAccountKey:  "service account json key",
-			CredentialFilePath: "path/to/service_account.json",
+			Region:            "us-central1",
+			ProjectID:         "my-project-id",
+			ServiceAccountKey: "path/to/service_account.json",
 			Services: []Service{
 				{
 					ServiceName: "compute",

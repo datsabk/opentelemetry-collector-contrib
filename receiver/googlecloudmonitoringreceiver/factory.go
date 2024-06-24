@@ -5,6 +5,7 @@ package googlecloudmonitoringreceiver // import "github.com/open-telemetry/opent
 
 import (
 	"context"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
@@ -23,11 +24,10 @@ func NewFactory() receiver.Factory {
 // createDefaultConfig creates the default exporter configuration
 func createDefaultConfig() component.Config {
 	return &Config{
-		ControllerConfig:   scraperhelper.ControllerConfig{},
-		Region:             "us-est-1",
-		ProjectID:          "",
-		ServiceAccountKey:  "",
-		CredentialFilePath: "firebase.json",
+		ControllerConfig:  scraperhelper.ControllerConfig{},
+		Region:            "us-est-1",
+		ProjectID:         "",
+		ServiceAccountKey: "firebase.json",
 		Services: []Service{
 			{
 				ServiceName: "compute",

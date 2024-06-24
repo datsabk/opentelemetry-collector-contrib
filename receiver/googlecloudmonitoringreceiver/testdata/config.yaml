@@ -2,10 +2,9 @@ googlecloudmonitoring:
   collection_interval: 120s
   region: us-central1
   project_id: my-project-id
-  service_account_key: "service account json key"
-  credential_file_path: "path/to/service_account.json"
+  service_account_key: "path/to/service_account.json"
   services:
     - service_name: "compute"
-      delay: 60
+      delay: 60 # Second
       metric_name: "compute.googleapis.com/instance/cpu/usage_time"
-      interval: 120 # second
+      interval: 120 # Second

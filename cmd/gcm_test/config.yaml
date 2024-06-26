@@ -1,0 +1,41 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+  googlecloudmonitoring: # this line represents the ID of your receiver
+    collection_interval: 120s
+    region: us-central1
+    project_id: cloudwerx-otel-integration-dev
+    service_account_key: "cloudwerx-otel-integration-dev-53ad6a762b31.json"
+    services:
+      - service_name: "compute"
+        metric_name: "compute.googleapis.com/instance/cpu/usage_time"
+        interval: 3600s
+        delay: 3600s
+
+processors:
+  batch:
+
+exporters:
+  # NOTE: Prior to v0.86.0 use `logging` instead of `debug`.
+  debug:
+    verbosity: detailed
+  otlp/jaeger:
+    endpoint: localhost:14317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger, debug]
+    metrics: # Add a metrics pipeline
+      receivers: [googlecloudmonitoring]
+      processors: [batch]
+      exporters: [debug]
+  telemetry:
+    logs:
+      level: debug

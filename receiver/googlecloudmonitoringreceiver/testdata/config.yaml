@@ -5,6 +5,6 @@ googlecloudmonitoring:
   service_account_key: "path/to/service_account.json"
   services:
     - service_name: "compute"
-      delay: 60 # Second
+      delay: 60s # Second
       metric_name: "compute.googleapis.com/instance/cpu/usage_time"
-      interval: 120 # Second
+      interval: 120s # Second

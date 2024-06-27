@@ -8,11 +8,15 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"google.golang.org/api/option"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"google.golang.org/api/option"
+	"google.golang.org/genproto/googleapis/api/metric"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudmonitoringreceiver/internal"
 
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 
@@ -124,7 +128,7 @@ func (m *monitoringReceiver) collectMetricsDataFromEndpoint(ctx context.Context)
 	// Iterate over the time series data
 	for {
 		resp, err := it.Next()
-		respData := fmt.Sprintf("\n\nresp => %s", resp)
+		respData := fmt.Sprintf("\n \n resp => %s \n \n", resp)
 		m.logger.Info(respData)
 
 		// Handle errors and break conditions for the iterator
@@ -138,6 +142,15 @@ func (m *monitoringReceiver) collectMetricsDataFromEndpoint(ctx context.Context)
 			}
 			return nil, fmt.Errorf("failed to retrieve time series data: %v", err)
 		}
+
+		// Convert the GCP TimeSeries to pmetric.Metrics format of OpenTelemetry
+		metrics := convertGCPTimeSeriesToMetrics(resp)
+
+		// Process or export the metrics as needed
+		dataPointsCount := fmt.Sprintf("\n \n Converted metrics: %+v \n \n ", metrics.DataPointCount())
+		resourceMetrics := fmt.Sprintf("\n \n Converted metrics: %+v \n \n", metrics.ResourceMetrics())
+		m.logger.Info(dataPointsCount)
+		m.logger.Info(resourceMetrics)
 	}
 
 	return resp, nil
@@ -180,3 +193,52 @@ func getFilterQuery(service Service) string {
 		return ""
 	}
 }
+
+// ConvertGCPTimeSeriesToMetrics converts GCP Monitoring TimeSeries to pmetric.Metrics
+func convertGCPTimeSeriesToMetrics(resp *monitoringpb.TimeSeries) pmetric.Metrics {
+	metrics := pmetric.NewMetrics()
+	rm := metrics.ResourceMetrics().AppendEmpty()
+	sm := rm.ScopeMetrics().AppendEmpty()
+	m := sm.Metrics().AppendEmpty()
+
+	// Set metric name and description
+	m.SetName(resp.Metric.Type)
+	m.SetUnit(resp.Unit)
+
+	// Assuming MetricDescriptor and description are set
+	m.SetDescription("Converted from GCP Monitoring TimeSeries")
+
+	// Set resource labels
+	resource := rm.Resource()
+	resource.Attributes().PutStr("resource_type", resp.Resource.Type)
+	for k, v := range resp.Resource.Labels {
+		resource.Attributes().PutStr(k, v)
+	}
+
+	// Set metadata (user and system labels)
+	if resp.Metadata != nil {
+		for k, v := range resp.Metadata.UserLabels {
+			resource.Attributes().PutStr(k, v)
+		}
+		if resp.Metadata.SystemLabels != nil {
+			for k, v := range resp.Metadata.SystemLabels.Fields {
+				resource.Attributes().PutStr(k, fmt.Sprintf("%v", v))
+			}
+		}
+	}
+
+	switch resp.GetMetricKind() {
+	case metric.MetricDescriptor_GAUGE:
+		internal.ConvertGaugeToMetrics(resp, m)
+	case metric.MetricDescriptor_CUMULATIVE:
+		internal.ConvertSumToMetrics(resp, m)
+	case metric.MetricDescriptor_DELTA:
+		internal.ConvertDeltaToMetrics(resp, m)
+	// Add cases for SUMMARY, HISTOGRAM, EXPONENTIAL_HISTOGRAM if needed
+	default:
+		log.Printf("Unsupported metric kind: %v\n", resp.GetMetricKind())
+	}
+
+	return metrics
+}
+

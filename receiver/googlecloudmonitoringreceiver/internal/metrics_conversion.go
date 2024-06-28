@@ -1,4 +1,4 @@
-package internal
+package internal // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudmonitoringreceiver/internal"
 
 import (
 	"log"

@@ -1,4 +1,4 @@
-package googlecloudmonitoringreceiver
+package googlecloudmonitoringreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudmonitoringreceiver"
 
 import (
 	"context"

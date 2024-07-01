@@ -7,4 +7,3 @@ googlecloudmonitoring:
     - service_name: "compute"
       delay: 60s # Second
       metric_name: "compute.googleapis.com/instance/cpu/usage_time"
-      interval: 120s # Second

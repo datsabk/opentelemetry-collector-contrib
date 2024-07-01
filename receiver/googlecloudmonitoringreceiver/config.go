@@ -26,7 +26,6 @@ type Service struct {
 	ServiceName string        `mapstructure:"service_name"`
 	Delay       time.Duration `mapstructure:"delay"`
 	MetricName  string        `mapstructure:"metric_name"`
-	Interval    time.Duration `mapstructure:"interval"`
 }
 
 func (config *Config) Validate() error {

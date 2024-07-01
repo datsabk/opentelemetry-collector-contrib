@@ -5,6 +5,7 @@ package googlecloudmonitoringreceiver // import "github.com/open-telemetry/opent
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -31,8 +32,7 @@ func createDefaultConfig() component.Config {
 		Services: []Service{
 			{
 				ServiceName: "compute",
-				Delay:       240,
-				Interval:    10,
+				Delay:       240 * time.Second,
 			},
 		},
 	}

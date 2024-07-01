@@ -93,7 +93,7 @@ func (m *monitoringReceiver) collectMetricsDataFromEndpoint(ctx context.Context)
 	// Iterate over each service in the configuration to calculate start/end times and construct the filter query.
 	for _, service := range m.config.Services {
 		// Define the interval and delay times
-		interval := service.Interval
+		interval := m.config.CollectionInterval
 		delay := service.Delay
 
 		// Calculate the start and end times

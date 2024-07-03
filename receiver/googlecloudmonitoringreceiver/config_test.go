@@ -31,6 +31,7 @@ func TestLoadConfig(t *testing.T) {
 		&Config{
 			ControllerConfig: scraperhelper.ControllerConfig{
 				CollectionInterval: 120 * time.Second,
+				InitialDelay:       1 * time.Second,
 			},
 			Region:            "us-central1",
 			ProjectID:         "my-project-id",
@@ -83,20 +84,19 @@ func TestValidateService(t *testing.T) {
 
 func TestValidateConfig(t *testing.T) {
 	validService := Service{
-		ServiceName: "compute",
-		Delay:       60 * time.Second, // Ensure delay is valid
-		MetricName:  "compute.googleapis.com/instance/cpu/usage_time",
+		ServiceName: "service_name",
+		Delay:       0 * time.Second,
 	}
 
 	testCases := map[string]struct {
-		collectionInterval time.Duration
 		services           []Service
+		collectionInterval time.Duration
 		requireError       bool
 	}{
-		"Valid Config":                {120 * time.Second, []Service{validService}, false},
-		"Invalid Collection Interval": {0, []Service{validService}, true},
-		"Empty Services":              {120 * time.Second, nil, true},
-		"Invalid Service in Services": {120 * time.Second, []Service{{}}, true},
+		"Valid Config":                {[]Service{validService}, 60 * time.Second, false},
+		"Empty Services":              {nil, 60 * time.Second, true},
+		"Invalid Service in Services": {[]Service{{}}, 60 * time.Second, true},
+		"Invalid Collection Interval": {[]Service{validService}, 0 * time.Second, true},
 	}
 
 	for name, testCase := range testCases {

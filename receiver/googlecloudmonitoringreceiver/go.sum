@@ -130,6 +130,8 @@ go.opentelemetry.io/collector/featuregate v1.10.0 h1:krSqokHTp7JthgmtewysqHuOAkc
 go.opentelemetry.io/collector/featuregate v1.10.0/go.mod h1:PsOINaGgTiFc+Tzu2K/X2jP+Ngmlp7YKGV1XrnBkH7U=
 go.opentelemetry.io/collector/pdata v1.10.0 h1:oLyPLGvPTQrcRT64ZVruwvmH/u3SHTfNo01pteS4WOE=
 go.opentelemetry.io/collector/pdata v1.10.0/go.mod h1:IHxHsp+Jq/xfjORQMDJjSH6jvedOSTOyu3nbxqhWSYE=
+go.opentelemetry.io/collector/pdata/testdata v0.103.0 h1:iI6NOE0L2je/bxlWzAWHQ/yCtnGupgv42Hl9Al1q/g4=
+go.opentelemetry.io/collector/pdata/testdata v0.103.0/go.mod h1:tLzRhb/h37/9wFRQVr+CxjKi5qmhSRpCAiOlhwRkeEk=
 go.opentelemetry.io/collector/receiver v0.103.0 h1:V3JBKkX+7e/NYpDDZVyeu2VQB1/lLFuoJFPfupdCcZs=
 go.opentelemetry.io/collector/receiver v0.103.0/go.mod h1:Yybv4ynKFdMOYViWWPMmjkugR89FSQN0P37wP6mX6qM=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 h1:4Pp6oUg3+e/6M4C0A/3kJ2VYa++dsWVTtGgLVj5xtHg=

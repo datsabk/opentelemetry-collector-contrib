@@ -5,7 +5,6 @@ package googlecloudmonitoringreceiver // import "github.com/open-telemetry/opent
 
 import (
 	"context"
-	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -25,16 +24,7 @@ func NewFactory() receiver.Factory {
 // createDefaultConfig creates the default exporter configuration
 func createDefaultConfig() component.Config {
 	return &Config{
-		ControllerConfig:  scraperhelper.ControllerConfig{},
-		Region:            "us-est-1",
-		ProjectID:         "",
-		ServiceAccountKey: "firebase.json",
-		Services: []Service{
-			{
-				ServiceName: "compute",
-				Delay:       240 * time.Second,
-			},
-		},
+		ControllerConfig: scraperhelper.NewDefaultControllerConfig(),
 	}
 }
 

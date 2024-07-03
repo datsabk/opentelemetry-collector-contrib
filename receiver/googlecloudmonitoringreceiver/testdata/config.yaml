@@ -7,3 +7,6 @@ googlecloudmonitoring:
     - service_name: "compute"
       delay: 60s # Second
       metric_name: "compute.googleapis.com/instance/cpu/usage_time"
+    - service_name: "connectors"
+      delay: 60s # Second
+      metric_name: "connectors.googleapis.com/flex/instance/cpu/usage_time"

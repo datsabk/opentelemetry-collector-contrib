@@ -3,13 +3,25 @@ package internal // import "github.com/open-telemetry/opentelemetry-collector-co
 import (
 	"log"
 
+	"go.uber.org/zap"
+
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 )
 
-func ConvertGaugeToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.Metric {
+type MetricsBuilder struct {
+	logger *zap.Logger
+}
+
+func NewMetricsBuilder(logger *zap.Logger) *MetricsBuilder {
+	return &MetricsBuilder{
+		logger: logger,
+	}
+}
+
+func (mb *MetricsBuilder) ConvertGaugeToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.Metric {
 	m.SetName(ts.GetMetric().GetType())
 	// metric.SetDescription(ts.GetMetric().GetDescription())
 	m.SetUnit(ts.GetUnit())
@@ -17,6 +29,7 @@ func ConvertGaugeToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetri
 
 	for _, point := range ts.GetPoints() {
 		dp := gauge.DataPoints().AppendEmpty()
+		dp.SetStartTimestamp(pcommon.Timestamp(point.Interval.StartTime.Seconds))
 		dp.SetTimestamp(pcommon.Timestamp(point.Interval.EndTime.Seconds * 1e9)) // Convert to nanoseconds)
 
 		switch v := point.Value.Value.(type) {
@@ -32,7 +45,7 @@ func ConvertGaugeToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetri
 	return m
 }
 
-func ConvertSumToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.Metric {
+func (mb *MetricsBuilder) ConvertSumToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.Metric {
 	m.SetName(ts.GetMetric().GetType())
 	// metric.SetDescription(ts.GetMetric().GetDescription())
 	m.SetUnit(ts.GetUnit())
@@ -41,6 +54,7 @@ func ConvertSumToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.
 
 	for _, point := range ts.GetPoints() {
 		dp := sum.DataPoints().AppendEmpty()
+		dp.SetStartTimestamp(pcommon.Timestamp(point.Interval.StartTime.Seconds))
 		dp.SetTimestamp(pcommon.Timestamp(point.Interval.EndTime.Seconds * 1e9)) // Convert to nanoseconds)
 		dp.SetDoubleValue(point.GetValue().GetDoubleValue())
 	}
@@ -48,7 +62,7 @@ func ConvertSumToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.
 	return m
 }
 
-func ConvertDeltaToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.Metric {
+func (mb *MetricsBuilder) ConvertDeltaToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetric.Metric {
 	m.SetName(ts.GetMetric().GetType())
 	// metric.SetDescription(ts.GetMetric().GetDescription())
 	m.SetUnit(ts.GetUnit())
@@ -57,6 +71,7 @@ func ConvertDeltaToMetrics(ts *monitoringpb.TimeSeries, m pmetric.Metric) pmetri
 
 	for _, point := range ts.GetPoints() {
 		dp := sum.DataPoints().AppendEmpty()
+		dp.SetStartTimestamp(pcommon.Timestamp(point.Interval.StartTime.Seconds))
 		dp.SetTimestamp(pcommon.Timestamp(point.Interval.EndTime.Seconds * 1e9)) // Convert to nanoseconds
 		dp.SetDoubleValue(point.GetValue().GetDoubleValue())
 	}

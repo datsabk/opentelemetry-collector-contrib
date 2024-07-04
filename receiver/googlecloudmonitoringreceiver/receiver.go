@@ -24,74 +24,52 @@ import (
 )
 
 type monitoringReceiver struct {
-	config    *Config
-	logger    *zap.Logger
-	cancel    context.CancelFunc
-	client    *monitoring.MetricClient
-	startOnce sync.Once
+	_              context.CancelFunc
+	config         *Config
+	logger         *zap.Logger
+	client         *monitoring.MetricClient
+	metricsBuilder *internal.MetricsBuilder
+	startOnce      sync.Once
 }
 
 func newGoogleCloudMonitoringReceiver(cfg *Config, logger *zap.Logger) *monitoringReceiver {
 	return &monitoringReceiver{
-		config: cfg,
-		logger: logger,
+		config:         cfg,
+		logger:         logger,
+		metricsBuilder: internal.NewMetricsBuilder(logger),
 	}
 }
 
-func (m *monitoringReceiver) Scrape(ctx context.Context) (pmetric.Metrics, error) {
-	metrics := pmetric.NewMetrics()
-	m.logger.Debug("Scrape metrics ")
+func (mr *monitoringReceiver) Start(ctx context.Context, _ component.Host) error {
+	servicePath := mr.config.ServiceAccountKey
 
-	return metrics, nil
-}
-
-func (m *monitoringReceiver) Start(ctx context.Context, _ component.Host) error {
-	ctx, m.cancel = context.WithCancel(ctx)
-	err := m.initialize(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (m *monitoringReceiver) Shutdown(context.Context) error {
-	m.logger.Debug("shutting down googlecloudmonitoringreceiver receiver")
-	return nil
-}
-
-func (m *monitoringReceiver) initialize(ctx context.Context) error {
-	servicePath := m.config.ServiceAccountKey
-
-	m.startOnce.Do(func() {
+	mr.startOnce.Do(func() {
 		client, err := monitoring.NewMetricClient(ctx, option.WithCredentialsFile(servicePath))
 		if err != nil {
 			log.Fatalf("Failed to create client: %v", err)
 			return
 		}
 
-		m.client = client
+		mr.client = client
 	})
 
-	ctx, m.cancel = context.WithCancel(ctx)
-
-	// API for collect metrics data from timseries API
-	_, err := m.collectMetricsDataFromEndpoint(ctx)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
-// collectMetricsDataFromEndpoint collects metrics data from the specified endpoint based on the configuration.
-func (m *monitoringReceiver) collectMetricsDataFromEndpoint(ctx context.Context) (*monitoringpb.TimeSeries, error) {
+func (mr *monitoringReceiver) Shutdown(context.Context) error {
+	mr.logger.Debug("shutting down googlecloudmonitoringreceiver receiver")
+	return nil
+}
+
+func (mr *monitoringReceiver) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 	var calStartTime time.Time
 	var calEndTime time.Time
 	var filterQuery string
 
 	// Iterate over each service in the configuration to calculate start/end times and construct the filter query.
-	for _, service := range m.config.Services {
+	for _, service := range mr.config.Services {
 		// Define the interval and delay times
-		interval := m.config.CollectionInterval
+		interval := mr.config.CollectionInterval
 		delay := service.Delay
 
 		// Calculate the start and end times
@@ -102,13 +80,13 @@ func (m *monitoringReceiver) collectMetricsDataFromEndpoint(ctx context.Context)
 
 		// Log an error if the filter query is empty
 		if filterQuery == "" {
-			m.logger.Error("Internal Server Error")
+			mr.logger.Error("Internal Server Error")
 		}
 	}
 
 	// Define the request to list time series data
 	req := &monitoringpb.ListTimeSeriesRequest{
-		Name:   "projects/" + m.config.ProjectID,
+		Name:   "projects/" + mr.config.ProjectID,
 		Filter: filterQuery,
 		Interval: &monitoringpb.TimeInterval{
 			EndTime:   &timestamppb.Timestamp{Seconds: calEndTime.Unix()},
@@ -118,16 +96,15 @@ func (m *monitoringReceiver) collectMetricsDataFromEndpoint(ctx context.Context)
 	}
 
 	// Create an iterator for the time series data
-	it := m.client.ListTimeSeries(ctx, req)
-	m.logger.Info("Time series data:")
+	it := mr.client.ListTimeSeries(ctx, req)
+	mr.logger.Info("Time series data:")
 
-	var resp *monitoringpb.TimeSeries
-
+	var metrics pmetric.Metrics
 	// Iterate over the time series data
 	for {
-		resp, err := it.Next()
-		respData := fmt.Sprintf("\n \n resp => %s \n \n", resp)
-		m.logger.Info(respData)
+		timeSeriesMetrics, err := it.Next()
+		respData := fmt.Sprintf("\n \n timeSeriesMetrics => %s \n \n", timeSeriesMetrics)
+		mr.logger.Info(respData)
 
 		// Handle errors and break conditions for the iterator
 		if err != nil {
@@ -138,20 +115,18 @@ func (m *monitoringReceiver) collectMetricsDataFromEndpoint(ctx context.Context)
 			if err.Error() == "no more items in iterator" {
 				break
 			}
-			return nil, fmt.Errorf("failed to retrieve time series data: %v", err)
+			return metrics, fmt.Errorf("failed to retrieve time series data: %v", err)
 		}
 
 		// Convert the GCP TimeSeries to pmetric.Metrics format of OpenTelemetry
-		metrics := convertGCPTimeSeriesToMetrics(resp)
-
-		// Process or export the metrics as needed
-		dataPointsCount := fmt.Sprintf("\n \n Converted metrics: %+v \n \n ", metrics.DataPointCount())
-		resourceMetrics := fmt.Sprintf("\n \n Converted metrics: %+v \n \n", metrics.ResourceMetrics())
-		m.logger.Info(dataPointsCount)
-		m.logger.Info(resourceMetrics)
+		metrics = mr.convertGCPTimeSeriesToMetrics(timeSeriesMetrics)
 	}
+	dataPointsCount := fmt.Sprintf("\n \n Converted metrics: %+v \n \n ", metrics.DataPointCount())
+	resourceMetrics := fmt.Sprintf("\n \n Converted metrics: %+v \n \n", metrics.ResourceMetrics())
+	mr.logger.Info(dataPointsCount)
+	mr.logger.Info(resourceMetrics)
 
-	return resp, nil
+	return metrics, nil
 }
 
 // calculateStartEndTime calculates the start and end times based on the current time, interval, and delay.
@@ -193,7 +168,7 @@ func getFilterQuery(service Service) string {
 }
 
 // ConvertGCPTimeSeriesToMetrics converts GCP Monitoring TimeSeries to pmetric.Metrics
-func convertGCPTimeSeriesToMetrics(resp *monitoringpb.TimeSeries) pmetric.Metrics {
+func (mr *monitoringReceiver) convertGCPTimeSeriesToMetrics(resp *monitoringpb.TimeSeries) pmetric.Metrics {
 	metrics := pmetric.NewMetrics()
 	rm := metrics.ResourceMetrics().AppendEmpty()
 	sm := rm.ScopeMetrics().AppendEmpty()
@@ -227,16 +202,16 @@ func convertGCPTimeSeriesToMetrics(resp *monitoringpb.TimeSeries) pmetric.Metric
 
 	switch resp.GetMetricKind() {
 	case metric.MetricDescriptor_GAUGE:
-		internal.ConvertGaugeToMetrics(resp, m)
+		mr.metricsBuilder.ConvertGaugeToMetrics(resp, m)
 	case metric.MetricDescriptor_CUMULATIVE:
-		internal.ConvertSumToMetrics(resp, m)
+		mr.metricsBuilder.ConvertSumToMetrics(resp, m)
 	case metric.MetricDescriptor_DELTA:
-		internal.ConvertDeltaToMetrics(resp, m)
+		mr.metricsBuilder.ConvertDeltaToMetrics(resp, m)
 	// Add cases for SUMMARY, HISTOGRAM, EXPONENTIAL_HISTOGRAM if needed
 	default:
-		log.Printf("Unsupported metric kind: %v\n", resp.GetMetricKind())
+		metricError := fmt.Sprintf("\n Unsupported metric kind: %v\n", resp.GetMetricKind())
+		mr.logger.Info(metricError)
 	}
 
 	return metrics
 }
-
